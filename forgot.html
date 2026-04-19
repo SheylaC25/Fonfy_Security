@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#040810">
+<title>FONFY SECURITY — Recuperar Contraseña</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root { --bg:#040810; --card2:#111d35; --cyan:#00e5ff; --blue:#2979ff; --green:#00e676; --red:#ff1744; --txt:#e8f0fe; --txt2:#8fa8c8; --border:rgba(0,229,255,0.15); --glow:0 0 20px rgba(0,229,255,0.35); --fd:'Orbitron',monospace; --fb:'Exo 2',sans-serif; }
+body { font-family:var(--fb); background:var(--bg); color:var(--txt); min-height:100vh; display:flex; align-items:center; justify-content:center; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+.wrap { position:relative; z-index:1; width:100%; max-width:400px; padding:32px 24px 48px; }
+.header { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:28px; text-align:center; }
+.logo { font-family:var(--fd); font-size:1.8rem; font-weight:900; color:var(--cyan); text-shadow:var(--glow); letter-spacing:5px; }
+.page-title { font-family:var(--fd); font-size:1rem; font-weight:700; color:var(--txt); letter-spacing:2px; margin-top:16px; }
+.page-sub { font-size:0.8rem; color:var(--txt2); margin-top:4px; line-height:1.5; text-align:center; }
+.field { margin-bottom:16px; position:relative; }
+.label { display:block; font-size:0.68rem; font-weight:700; color:var(--txt2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:7px; }
+.inp { width:100%; background:var(--card2); border:1.5px solid var(--border); border-radius:12px; padding:13px 16px 13px 44px; color:var(--txt); font-family:var(--fb); font-size:0.95rem; outline:none; transition:border-color .2s,box-shadow .2s; -webkit-appearance:none; }
+.inp:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,229,255,0.1); }
+.inp::placeholder { color:rgba(143,168,200,0.4); }
+.ico { position:absolute; left:14px; bottom:13px; font-size:1rem; pointer-events:none; }
+.error-box { background:rgba(255,23,68,0.1); border:1px solid rgba(255,23,68,0.35); border-radius:10px; padding:10px 14px; font-size:0.8rem; color:var(--red); margin-bottom:12px; display:none; align-items:center; gap:8px; }
+.error-box.show { display:flex; }
+.ok-box { background:rgba(0,230,118,0.1); border:1px solid rgba(0,230,118,0.3); border-radius:10px; padding:10px 14px; font-size:0.8rem; color:var(--green); margin-bottom:12px; display:none; }
+.ok-box.show { display:block; }
+.btn-main { width:100%; padding:15px; background:linear-gradient(135deg,var(--blue),var(--cyan)); border:none; border-radius:14px; color:#040810; font-family:var(--fd); font-size:0.88rem; font-weight:900; letter-spacing:2px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn-main:active { transform:scale(0.97); }
+.btn-main:disabled { opacity:0.5; pointer-events:none; }
+.btn-ghost { width:100%; padding:13px; background:transparent; border:1.5px solid var(--border); border-radius:14px; color:var(--txt2); font-family:var(--fb); font-size:0.88rem; cursor:pointer; margin-top:10px; }
+.btn-ghost:active { border-color:var(--cyan); color:var(--cyan); }
+.spin { width:16px; height:16px; border:2px solid rgba(4,8,16,0.25); border-top-color:#040810; border-radius:50%; animation:rot .7s linear infinite; }
+@keyframes rot { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div style="font-size:3rem;filter:drop-shadow(0 0 14px rgba(0,229,255,0.5))">🔑</div>
+    <div class="logo">FONFY</div>
+    <div class="page-title">RECUPERAR CONTRASEÑA</div>
+    <div class="page-sub">Ingresa tu correo registrado y te enviaremos un código de verificación</div>
+  </div>
+
+  <div class="field">
+    <label class="label">Correo Gmail registrado</label>
+    <span class="ico">📧</span>
+    <input id="email" class="inp" type="email" placeholder="tucorreo@gmail.com">
+  </div>
+
+  <div class="error-box" id="err">⚠️ <span id="err-msg">Correo no encontrado en el sistema</span></div>
+  <div class="ok-box" id="ok">✅ Código enviado. Revisa tu bandeja de entrada.</div>
+
+  <button class="btn-main" id="btn" onclick="doForgot()">ENVIAR CÓDIGO</button>
+  <button class="btn-ghost" onclick="window.location.href='login.html'">← Volver al login</button>
+</div>
+
+<script>
+function showErr(msg) { document.getElementById('err-msg').textContent=msg; document.getElementById('err').classList.add('show'); document.getElementById('ok').classList.remove('show'); }
+function hideErr() { document.getElementById('err').classList.remove('show'); }
+
+function doForgot() {
+  hideErr();
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) { showErr('Ingresa un correo válido'); return; }
+
+  const accounts = JSON.parse(localStorage.getItem('fonfy_accounts') || '{}');
+  if (!accounts[email]) { showErr('Este correo no está registrado en FONFY'); return; }
+
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div> ENVIANDO...';
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  localStorage.setItem('fonfy_pending', JSON.stringify({ email, code, expires: Date.now() + 600000, flow: 'forgot' }));
+
+  setTimeout(() => {
+    btn.disabled = false; btn.textContent = 'ENVIAR CÓDIGO';
+    alert('📧 DEMO — Código de recuperación para: ' + email + '\n\nCódigo: ' + code);
+    document.getElementById('ok').classList.add('show');
+    setTimeout(() => window.location.href = 'verify.html', 1500);
+  }, 1000);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doForgot(); });
+</script>
+</body>
+</html>

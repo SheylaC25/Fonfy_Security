@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#040810">
+<title>FONFY SECURITY — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg:       #040810;
+  --card:     #0d1628;
+  --card2:    #111d35;
+  --cyan:     #00e5ff;
+  --blue:     #2979ff;
+  --green:    #00e676;
+  --orange:   #ff9100;
+  --red:      #ff1744;
+  --txt:      #e8f0fe;
+  --txt2:     #8fa8c8;
+  --border:   rgba(0,229,255,0.15);
+  --glow:     0 0 20px rgba(0,229,255,0.35);
+  --fd:       'Orbitron', monospace;
+  --fb:       'Exo 2', sans-serif;
+}
+
+body {
+  font-family: var(--fb);
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none; z-index:0;
+}
+
+.wrap {
+  position:relative; z-index:1;
+  width:100%; max-width:400px;
+  padding: 32px 24px 48px;
+}
+
+/* HEADER */
+.header {
+  display:flex; flex-direction:column; align-items:center;
+  gap:6px; margin-bottom:36px; text-align:center;
+}
+.shield { font-size:3.2rem; filter:drop-shadow(0 0 14px rgba(0,229,255,0.5)); }
+.logo {
+  font-family:var(--fd); font-size:2.6rem; font-weight:900;
+  color:var(--cyan); text-shadow:var(--glow); letter-spacing:5px;
+}
+.logo-sub { font-size:0.68rem; color:var(--txt2); letter-spacing:3px; text-transform:uppercase; }
+.page-title {
+  font-family:var(--fd); font-size:1rem; font-weight:700;
+  color:var(--txt); letter-spacing:2px; margin-top:20px;
+}
+.page-sub { font-size:0.8rem; color:var(--txt2); margin-top:4px; }
+
+/* FORM */
+.field { margin-bottom:16px; position:relative; }
+.label {
+  display:block; font-size:0.68rem; font-weight:700;
+  color:var(--txt2); letter-spacing:1.5px; text-transform:uppercase;
+  margin-bottom:7px;
+}
+.inp {
+  width:100%; background:var(--card2);
+  border:1.5px solid var(--border); border-radius:12px;
+  padding:13px 44px 13px 44px;
+  color:var(--txt); font-family:var(--fb); font-size:0.95rem;
+  outline:none; transition:border-color .2s, box-shadow .2s;
+  -webkit-appearance:none;
+}
+.inp:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,229,255,0.1); }
+.inp::placeholder { color:rgba(143,168,200,0.4); }
+.ico { position:absolute; left:14px; bottom:13px; font-size:1rem; pointer-events:none; }
+.eye {
+  position:absolute; right:12px; bottom:10px;
+  background:none; border:none; cursor:pointer;
+  color:var(--txt2); font-size:1rem; padding:4px;
+}
+
+/* ERROR BOX */
+.error-box {
+  background:rgba(255,23,68,0.1); border:1px solid rgba(255,23,68,0.35);
+  border-radius:10px; padding:10px 14px;
+  font-size:0.8rem; color:var(--red);
+  margin-bottom:12px; display:none; align-items:center; gap:8px;
+}
+.error-box.show { display:flex; }
+
+/* BUTTONS */
+.btn-main {
+  width:100%; padding:15px;
+  background:linear-gradient(135deg, var(--blue), var(--cyan));
+  border:none; border-radius:14px;
+  color:#040810; font-family:var(--fd);
+  font-size:0.88rem; font-weight:900; letter-spacing:2px;
+  cursor:pointer; transition:all .2s;
+  box-shadow:0 4px 20px rgba(0,229,255,0.25);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-main:active { transform:scale(0.97); }
+.btn-main:disabled { opacity:0.5; pointer-events:none; }
+
+.btn-ghost {
+  width:100%; padding:13px;
+  background:transparent; border:1.5px solid var(--border);
+  border-radius:14px; color:var(--txt2);
+  font-family:var(--fb); font-size:0.88rem;
+  cursor:pointer; transition:all .2s; margin-top:10px;
+}
+.btn-ghost:active { border-color:var(--cyan); color:var(--cyan); }
+
+.divider {
+  display:flex; align-items:center; gap:12px;
+  margin:20px 0; color:var(--txt2); font-size:0.75rem;
+}
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.switch { text-align:center; font-size:0.82rem; color:var(--txt2); margin-top:20px; }
+.link {
+  color:var(--cyan); font-weight:700; cursor:pointer;
+  background:none; border:none; font-family:var(--fb); font-size:0.82rem;
+  text-decoration:underline;
+}
+
+.badge {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(0,229,255,0.05); border:1px solid var(--border);
+  border-radius:10px; padding:10px 14px;
+  font-size:0.73rem; color:var(--txt2); margin-top:16px;
+}
+
+/* SPINNER */
+.spin {
+  width:16px; height:16px;
+  border:2px solid rgba(4,8,16,0.25); border-top-color:#040810;
+  border-radius:50%; animation:rot .7s linear infinite;
+}
+@keyframes rot { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="shield">🛡️</div>
+    <div class="logo">FONFY</div>
+    <div class="logo-sub">SECURITY · LA PAZ</div>
+    <div class="page-title">INICIAR SESIÓN</div>
+    <div class="page-sub">Accede a tu red de seguridad ciudadana</div>
+  </div>
+
+  <div class="field">
+    <label class="label">Usuario o Correo</label>
+    <span class="ico">👤</span>
+    <input id="u" class="inp" type="text" placeholder="usuario o correo@gmail.com" autocomplete="username">
+  </div>
+
+  <div class="field">
+    <label class="label">Contraseña</label>
+    <span class="ico">🔑</span>
+    <input id="p" class="inp" type="password" placeholder="Tu contraseña" autocomplete="current-password" style="padding-right:44px">
+    <button class="eye" type="button" onclick="toggleEye('p',this)">👁️</button>
+  </div>
+
+  <div class="error-box" id="err">⚠️ <span id="err-msg">Usuario o contraseña incorrectos</span></div>
+
+  <button class="btn-main" id="btn-login" onclick="doLogin()">
+    INGRESAR
+  </button>
+
+  <button class="btn-ghost" onclick="window.location.href='forgot.html'">
+    ¿Olvidaste tu contraseña?
+  </button>
+
+  <div class="divider">o</div>
+
+  <div class="switch">
+    ¿No tienes cuenta?
+    <button class="link" onclick="window.location.href='register.html'">Regístrate aquí</button>
+  </div>
+
+  <div class="badge">🔐 Conexión cifrada · Datos protegidos E2EE</div>
+</div>
+
+<script>
+function toggleEye(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+}
+
+function showErr(msg) {
+  const box = document.getElementById('err');
+  document.getElementById('err-msg').textContent = msg;
+  box.classList.add('show');
+}
+function hideErr() { document.getElementById('err').classList.remove('show'); }
+
+function doLogin() {
+  hideErr();
+  const user = document.getElementById('u').value.trim();
+  const pass = document.getElementById('p').value;
+
+  if (!user) { showErr('Ingresa tu usuario o correo'); return; }
+  if (!pass) { showErr('Ingresa tu contraseña'); return; }
+
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div> VERIFICANDO...';
+
+  setTimeout(() => {
+    // Load accounts from localStorage
+    const accounts = JSON.parse(localStorage.getItem('fonfy_accounts') || '{}');
+    const found = Object.values(accounts).find(a =>
+      (a.username === user || a.email === user) && a.password === pass
+    );
+
+    if (found) {
+      // Save active session
+      localStorage.setItem('fonfy_session', JSON.stringify({
+        username: found.username,
+        email: found.email,
+        loginTime: Date.now()
+      }));
+      window.location.href = 'app.html';
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'INGRESAR';
+      showErr('Usuario o contraseña incorrectos');
+    }
+  }, 1000);
+}
+
+// Enter key
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// If already logged in, go to app
+(function() {
+  const s = localStorage.getItem('fonfy_session');
+  if (s) window.location.href = 'app.html';
+})();
+</script>
+</body>
+</html>

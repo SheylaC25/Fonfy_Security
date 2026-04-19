@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#040810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FONFY">
+<link rel="manifest" href="manifest.json">
+<title>FONFY SECURITY</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#040810; --card:#0d1628; --card2:#111d35;
+  --cyan:#00e5ff; --blue:#2979ff; --green:#00e676;
+  --orange:#ff9100; --red:#ff1744;
+  --txt:#e8f0fe; --txt2:#8fa8c8; --border:rgba(0,229,255,0.15);
+  --glow:0 0 20px rgba(0,229,255,0.4);
+  --glow-red:0 0 30px rgba(255,23,68,0.6);
+  --fd:'Orbitron',monospace; --fb:'Exo 2',sans-serif;
+}
+body { font-family:var(--fb); background:var(--bg); color:var(--txt); min-height:100vh; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+
+/* ===== TOPBAR ===== */
+#topbar { position:fixed; top:0; left:0; right:0; z-index:100; height:60px; background:rgba(4,8,16,0.97); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+.tlogo { font-family:var(--fd); font-size:1.2rem; font-weight:900; color:var(--cyan); text-shadow:var(--glow); letter-spacing:2px; }
+.tlogo span { color:var(--txt2); font-size:0.65rem; display:block; font-family:var(--fb); letter-spacing:1px; }
+.tright { display:flex; gap:10px; align-items:center; }
+.sdot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 2s ease-in-out infinite; }
+.avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--cyan)); border:2px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:700; cursor:pointer; }
+
+/* ===== MAIN ===== */
+#main { margin-top:60px; margin-bottom:70px; overflow-y:auto; position:relative; z-index:1; }
+.screen { display:none; padding:16px; animation:fadeIn .3s ease; }
+.screen.active { display:block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes sos-pulse { 0%{transform:scale(1);opacity:1} 100%{transform:scale(1.3);opacity:0} }
+
+/* ===== BOTTOM NAV ===== */
+#bnav { position:fixed; bottom:0; left:0; right:0; z-index:100; height:70px; background:rgba(4,8,16,0.97); backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; align-items:center; }
+.ni { flex:1; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; color:var(--txt2); transition:color .2s; }
+.ni.active { color:var(--cyan); }
+.ni.active .nicon { filter:drop-shadow(0 0 6px var(--cyan)); }
+.nicon { font-size:1.4rem; transition:transform .15s; }
+.ni:active .nicon { transform:scale(0.85); }
+.nlabel { font-size:0.6rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
+
+/* ===== CARDS ===== */
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:12px; }
+.ctitle { font-family:var(--fd); font-size:0.72rem; color:var(--cyan); letter-spacing:2px; text-transform:uppercase; margin-bottom:12px; }
+
+/* ===== GPS CARD ===== */
+.gcard { background:linear-gradient(135deg,var(--card),#0d1e35); border:1px solid var(--cyan); border-radius:20px; padding:18px; margin-bottom:14px; position:relative; overflow:hidden; }
+.gcard::after { content:''; position:absolute; top:-50%; right:-20%; width:200px; height:200px; background:radial-gradient(circle,rgba(0,229,255,0.07),transparent); border-radius:50%; pointer-events:none; }
+.gcreds { font-family:monospace; font-size:0.8rem; color:var(--txt2); margin-top:3px; }
+.gzone { font-size:1.05rem; font-weight:700; margin-top:6px; }
+.gaddr { font-size:0.78rem; color:var(--txt2); margin-top:3px; }
+
+/* ZONE BADGES */
+.zbadge { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:2px solid; }
+.z-safe   { background:rgba(0,230,118,.12); border-color:var(--green); color:var(--green); }
+.z-norm   { background:rgba(255,238,0,.12); border-color:#ffee00; color:#ffee00; }
+.z-risk   { background:rgba(255,145,0,.12); border-color:var(--orange); color:var(--orange); }
+.z-danger { background:rgba(255,23,68,.12); border-color:var(--red); color:var(--red); }
+
+/* ===== SOS ===== */
+.sos-wrap { display:flex; justify-content:center; margin:14px 0; }
+.sos { width:130px; height:130px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#ff4d6d,#c00020); border:4px solid rgba(255,100,130,.4); box-shadow:var(--glow-red),0 0 60px rgba(255,23,68,.25),inset 0 2px 8px rgba(255,255,255,.15); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; color:white; gap:3px; position:relative; user-select:none; }
+.sos:active { transform:scale(0.93); }
+.sos-ring { position:absolute; inset:-10px; border-radius:50%; border:2px solid rgba(255,23,68,.4); animation:sos-pulse 2s ease-out infinite; pointer-events:none; }
+.sos-ring2 { position:absolute; inset:-20px; border-radius:50%; border:2px solid rgba(255,23,68,.2); animation:sos-pulse 2s ease-out infinite .5s; pointer-events:none; }
+.sos-ico { font-size:2.2rem; }
+.sos-txt { font-family:var(--fd); font-size:1rem; font-weight:900; letter-spacing:3px; }
+.sos-sub { font-size:0.52rem; letter-spacing:.8px; opacity:.75; }
+
+/* ===== QUICK GRID ===== */
+.qgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.qbtn { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:all .2s; text-align:center; }
+.qbtn:active { transform:scale(.96); background:var(--card); }
+.qico { font-size:1.6rem; }
+.qlbl { font-size:0.7rem; font-weight:600; color:var(--txt2); }
+
+/* ===== EMERGENCY LIST ===== */
+.elist { display:flex; flex-direction:column; gap:8px; }
+.eitem { display:flex; align-items:center; gap:12px; background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; cursor:pointer; text-decoration:none; color:inherit; transition:all .2s; }
+.eitem:active { background:rgba(41,121,255,.15); border-color:var(--blue); }
+.eico { font-size:1.4rem; }
+.einfo { flex:1; }
+.ename { font-size:0.85rem; font-weight:700; }
+.enum { font-size:0.8rem; color:var(--cyan); font-family:monospace; }
+.ecall { color:var(--green); font-size:1.2rem; }
+
+/* ===== MAP ===== */
+#map-cont { border-radius:16px; overflow:hidden; border:1px solid var(--border); height:55vh; margin-bottom:12px; position:relative; }
+#lmap { width:100%; height:100%; }
+.mload { position:absolute; inset:0; background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; z-index:10; }
+.mload p { font-size:0.8rem; color:var(--txt2); }
+.lring { width:50px; height:50px; border-radius:50%; border:3px solid transparent; border-top-color:var(--cyan); border-right-color:var(--blue); animation:spin 1s linear infinite; }
+.legend { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.ldot { width:10px; height:10px; border-radius:50%; }
+.litem { display:flex; align-items:center; gap:5px; font-size:0.7rem; color:var(--txt2); }
+.frow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.fbtn { padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--card2); color:var(--txt2); font-size:0.7rem; font-family:var(--fb); cursor:pointer; transition:all .2s; }
+.fbtn.on { background:rgba(0,229,255,.15); border-color:var(--cyan); color:var(--cyan); }
+
+/* ===== CONTACTS ===== */
+.invite-box { background:linear-gradient(135deg,rgba(41,121,255,.12),rgba(0,229,255,.07)); border:1px solid rgba(0,229,255,.25); border-radius:16px; padding:18px; text-align:center; margin-bottom:14px; }
+.inv-code { font-family:var(--fd); font-size:1.8rem; font-weight:900; color:var(--cyan); letter-spacing:6px; text-shadow:var(--glow); margin:8px 0; }
+.inv-sub { font-size:0.73rem; color:var(--txt2); }
+.sbtn { background:rgba(0,229,255,.12); border:1px solid var(--cyan); color:var(--cyan); padding:10px 24px; border-radius:12px; font-family:var(--fb); font-size:0.82rem; font-weight:600; cursor:pointer; margin-top:10px; }
+.sbtn:active { background:rgba(0,229,255,.25); }
+.addinp { display:flex; gap:8px; margin-bottom:12px; }
+.ci { flex:1; background:var(--card2); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--txt); font-family:var(--fb); font-size:0.88rem; outline:none; text-transform:uppercase; }
+.ci:focus { border-color:var(--cyan); }
+.addsbtn { background:var(--blue); border:none; border-radius:10px; padding:10px 16px; color:white; cursor:pointer; font-size:0.85rem; font-family:var(--fb); }
+.citem { display:flex; align-items:center; gap:12px; background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; position:relative; }
+.cavatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:700; flex-shrink:0; }
+.conl { box-shadow:0 0 0 2px var(--green); }
+.coff { box-shadow:0 0 0 2px #555; }
+.cinfo { flex:1; }
+.cname { font-size:0.88rem; font-weight:600; }
+.cstat { font-size:0.7rem; color:var(--txt2); margin-top:2px; }
+.cdot { position:absolute; top:12px; right:12px; width:8px; height:8px; border-radius:50%; }
+.cdot.on { background:var(--green); box-shadow:0 0 6px var(--green); animation:blink 2s infinite; }
+.cdot.off { background:#555; }
+.e2ee { text-align:center; padding:12px; font-size:0.7rem; color:var(--txt2); }
+
+/* ===== TIENDAS ===== */
+.stitle { font-size:0.7rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--txt2); margin:16px 0 8px; display:flex; align-items:center; gap:8px; }
+.stitle::after { content:''; flex:1; height:1px; background:var(--border); }
+.titem { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
+.tico { font-size:1.3rem; flex-shrink:0; margin-top:2px; }
+.tname { font-size:0.85rem; font-weight:600; }
+.taddr { font-size:0.72rem; color:var(--txt2); margin-top:3px; line-height:1.4; }
+.ttag { display:inline-block; font-size:0.6rem; padding:2px 8px; border-radius:6px; margin-top:5px; font-weight:700; }
+.tsuper { background:rgba(0,229,255,.12); color:var(--cyan); }
+.tfarma { background:rgba(0,230,118,.12); color:var(--green); }
+.tcajero { background:rgba(41,121,255,.12); color:var(--blue); }
+
+/* ===== PERFIL ===== */
+.ph { display:flex; flex-direction:column; align-items:center; padding:24px 16px 16px; text-align:center; }
+.pbig { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--cyan)); border:3px solid var(--cyan); box-shadow:var(--glow); display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700; margin-bottom:12px; }
+.pname { font-size:1.15rem; font-weight:700; }
+.pemail { font-size:0.78rem; color:var(--txt2); margin-top:3px; }
+.pbadge { margin-top:8px; background:rgba(0,229,255,.08); border:1px solid var(--cyan); color:var(--cyan); font-size:0.68rem; letter-spacing:2px; padding:4px 12px; border-radius:20px; font-family:var(--fd); }
+.sitem { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+.sitem:last-child { border-bottom:none; }
+.sico { font-size:1.2rem; width:30px; text-align:center; }
+.slbl { flex:1; font-size:0.88rem; }
+.sarr { color:var(--txt2); font-size:0.8rem; }
+.tog { width:46px; height:26px; background:#333; border-radius:13px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+.tog.on { background:var(--cyan); }
+.tog::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:white; transition:transform .2s; }
+.tog.on::after { transform:translateX(20px); }
+
+/* SENTINEL */
+.sentcard { background:linear-gradient(135deg,rgba(255,145,0,.08),rgba(255,23,68,.05)); border:1px solid rgba(255,145,0,.3); border-radius:16px; padding:16px; margin-bottom:12px; }
+.senttitle { font-family:var(--fd); font-size:0.78rem; color:var(--orange); letter-spacing:1px; }
+.sentdesc { font-size:0.77rem; color:var(--txt2); margin-top:8px; line-height:1.6; }
+
+/* LOGOUT BUTTON */
+.logout-btn { width:100%; padding:16px; background:rgba(255,23,68,.08); border:1.5px solid rgba(255,23,68,.4); border-radius:16px; color:var(--red); font-family:var(--fd); font-size:0.88rem; font-weight:700; letter-spacing:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; transition:all .2s; }
+.logout-btn:active { background:rgba(255,23,68,.2); }
+
+/* ===== SOS BANNER ===== */
+#sos-banner { display:none; position:fixed; top:60px; left:0; right:0; z-index:200; background:var(--red); padding:10px 16px; text-align:center; font-family:var(--fd); font-size:0.75rem; letter-spacing:2px; animation:flash .5s ease-in-out infinite alternate; }
+#sos-banner.show { display:block; }
+@keyframes flash { from{opacity:1} to{opacity:.6} }
+
+/* ===== TOAST ===== */
+#toast { position:fixed; bottom:85px; left:16px; right:16px; z-index:5000; background:var(--card2); border:1px solid var(--orange); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 30px rgba(0,0,0,.5); transform:translateY(200%); transition:transform .4s cubic-bezier(.34,1.56,.64,1); }
+#toast.show { transform:translateY(0); }
+.tico2 { font-size:1.3rem; flex-shrink:0; }
+.tbody { flex:1; }
+.ttitle { font-size:0.83rem; font-weight:700; }
+.tmsg { font-size:0.73rem; color:var(--txt2); margin-top:2px; }
+.tclose { font-size:1rem; cursor:pointer; color:var(--txt2); padding:4px; }
+
+/* ===== CONFIRM MODAL ===== */
+#modal { position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; padding:24px; }
+#modal.show { display:flex; animation:fadeIn .2s; }
+.mcard { background:var(--card); border:2px solid var(--red); border-radius:24px; padding:28px 22px; text-align:center; max-width:320px; width:100%; box-shadow:var(--glow-red),0 20px 60px rgba(0,0,0,.8); }
+.mica { font-size:2.8rem; margin-bottom:10px; }
+.mtitle { font-family:var(--fd); font-size:1.2rem; font-weight:900; margin-bottom:8px; }
+.mmsg { font-size:0.82rem; color:var(--txt2); margin-bottom:20px; line-height:1.6; }
+.mbtns { display:flex; gap:10px; }
+.mok { flex:1; padding:12px; background:var(--red); border:none; border-radius:12px; color:white; font-family:var(--fd); font-size:0.78rem; font-weight:700; cursor:pointer; letter-spacing:1px; }
+.mok.green { background:var(--green); color:#040810; }
+.mcanc { flex:1; padding:12px; background:var(--card2); border:1px solid var(--border); border-radius:12px; color:var(--txt2); font-family:var(--fb); font-size:0.85rem; cursor:pointer; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* APP INFO */
+.appinfo { text-align:center; padding:18px; font-size:0.68rem; color:var(--txt2); line-height:1.8; }
+</style>
+</head>
+<body>
+
+<!-- SOS BANNER -->
+<div id="sos-banner">🚨 SOS ACTIVO — CONTACTOS NOTIFICADOS — AYUDA EN CAMINO</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div class="tico2" id="t-ico">⚠️</div>
+  <div class="tbody">
+    <div class="ttitle" id="t-title">Alerta</div>
+    <div class="tmsg" id="t-msg"></div>
+  </div>
+  <div class="tclose" onclick="hideToast()">✕</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="mcard">
+    <div class="mica" id="m-ico">🚨</div>
+    <div class="mtitle" id="m-title">Confirmar</div>
+    <div class="mmsg" id="m-msg">¿Estás seguro?</div>
+    <div class="mbtns">
+      <button class="mok" id="m-ok" onclick="confirmModal()">CONFIRMAR</button>
+      <button class="mcanc" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="tlogo">FONFY <span>SECURITY · LA PAZ</span></div>
+  <div class="tright">
+    <div class="sdot"></div>
+    <div class="avatar" id="av" onclick="go('perfil')">U</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- HOME -->
+  <div class="screen active" id="s-home">
+
+    <div class="gcard">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:0.67rem;color:var(--txt2);letter-spacing:2px;text-transform:uppercase">📍 Tu Ubicación</div>
+          <div class="gcreds" id="coords">Obteniendo GPS...</div>
+          <div class="gzone" id="zone-name">—</div>
+          <div class="gaddr" id="zone-addr">Activa tu ubicación para análisis de riesgo</div>
+        </div>
+        <div class="zbadge z-norm" id="zone-badge">● NORMAL</div>
+      </div>
+      <div style="margin-top:12px">
+        <button onclick="getGPS()" style="background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);padding:8px 16px;border-radius:10px;font-size:0.76rem;cursor:pointer;font-family:var(--fb)">🔄 Actualizar</button>
+      </div>
+    </div>
+
+    <div class="sos-wrap">
+      <div class="sos" id="sos-btn">
+        <div class="sos-ring"></div>
+        <div class="sos-ring2"></div>
+        <div class="sos-ico">🆘</div>
+        <div class="sos-txt">SOS</div>
+        <div class="sos-sub" id="sos-sub">MANTENER 3 SEG</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">⚡ Acciones Rápidas</div>
+      <div class="qgrid">
+        <div class="qbtn" onclick="go('mapa')"><div class="qico">🗺️</div><div class="qlbl">Mapa de Riesgo</div></div>
+        <div class="qbtn" onclick="go('contactos')"><div class="qico">👥</div><div class="qlbl">Red de Confianza</div></div>
+        <div class="qbtn" onclick="go('tiendas')"><div class="qico">🏪</div><div class="qlbl">Tiendas 24/7</div></div>
+        <div class="qbtn" onclick="go('perfil')"><div class="qico">🛡️</div><div class="qlbl">Modo Centinela</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">🚨 Emergencias La Paz</div>
+      <div class="elist">
+        <a class="eitem" href="tel:110"><div class="eico">👮</div><div class="einfo"><div class="ename">Policía BOL</div><div class="enum">110</div></div><div class="ecall">📞</div></a>
+        <a class="eitem" href="tel:114"><div class="eico">🚓</div><div class="einfo"><div class="ename">Radio Patrullas</div><div class="enum">114</div></div><div class="ecall">📞</div></a>
+        <a class="eitem" href="tel:116"><div class="eico">🚒</div><div class="einfo"><div class="ename">Bomberos</div><div class="enum">116</div></div><div class="ecall">📞</div></a>
+        <a class="eitem" href="tel:118"><div class="eico">🚑</div><div class="einfo"><div class="ename">Ambulancia SEDES</div><div class="enum">118</div></div><div class="ecall">📞</div></a>
+        <a class="eitem" href="tel:167"><div class="eico">🆘</div><div class="einfo"><div class="ename">Auxilio La Paz</div><div class="enum">167</div></div><div class="ecall">📞</div></a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">💡 Recomendaciones</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:10px"><span>🌙</span><span style="font-size:0.8rem;color:var(--txt2)">Evita caminar solo de noche en Max Paredes, Villa Fátima y Periférica</span></div>
+        <div style="display:flex;gap:10px"><span>📵</span><span style="font-size:0.8rem;color:var(--txt2)">No muestres objetos de valor ni uses el celular en zonas de riesgo alto</span></div>
+        <div style="display:flex;gap:10px"><span>🚕</span><span style="font-size:0.8rem;color:var(--txt2)">Usa transporte seguro y formal; evita taxis sin identificación</span></div>
+        <div style="display:flex;gap:10px"><span>👥</span><span style="font-size:0.8rem;color:var(--txt2)">Mantente en zonas concurridas y bien iluminadas</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="screen" id="s-mapa">
+    <div class="ctitle">🗺️ MAPA DE RIESGO — LA PAZ</div>
+    <div class="legend">
+      <div class="litem"><div class="ldot" style="background:#ff1744"></div> Alto Riesgo</div>
+      <div class="litem"><div class="ldot" style="background:#ff9100"></div> Riesgo Medio</div>
+      <div class="litem"><div class="ldot" style="background:#ffee00"></div> Moderado</div>
+      <div class="litem"><div class="ldot" style="background:#00e676"></div> Seguro</div>
+      <div class="litem"><div class="ldot" style="background:#2979ff"></div> Módulo Policial</div>
+    </div>
+    <div class="frow">
+      <button class="fbtn on" data-f="zones" onclick="toggleF(this)">🗺️ Zonas</button>
+      <button class="fbtn on" data-f="police" onclick="toggleF(this)">👮 Policía</button>
+      <button class="fbtn on" data-f="stores" onclick="toggleF(this)">🏪 Tiendas 24h</button>
+      <button class="fbtn on" data-f="me" onclick="toggleF(this)">📍 Mi Pos.</button>
+    </div>
+    <div id="map-cont">
+      <div class="mload" id="mload"><div class="lring"></div><p>Cargando mapa...</p></div>
+      <div id="lmap"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">📊 Estadísticas</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+        <div style="text-align:center;padding:12px;background:rgba(255,23,68,.08);border-radius:12px;border:1px solid rgba(255,23,68,.25)"><div style="font-size:1.4rem;font-weight:900;color:var(--red);font-family:var(--fd)">4</div><div style="font-size:0.68rem;color:var(--txt2)">Zonas Alto Riesgo</div></div>
+        <div style="text-align:center;padding:12px;background:rgba(255,145,0,.08);border-radius:12px;border:1px solid rgba(255,145,0,.25)"><div style="font-size:1.4rem;font-weight:900;color:var(--orange);font-family:var(--fd)">3</div><div style="font-size:0.68rem;color:var(--txt2)">Riesgo Medio</div></div>
+        <div style="text-align:center;padding:12px;background:rgba(255,238,0,.08);border-radius:12px;border:1px solid rgba(255,238,0,.25)"><div style="font-size:1.4rem;font-weight:900;color:#ffee00;font-family:var(--fd)">2</div><div style="font-size:0.68rem;color:var(--txt2)">Moderadas</div></div>
+        <div style="text-align:center;padding:12px;background:rgba(0,230,118,.08);border-radius:12px;border:1px solid rgba(0,230,118,.25)"><div style="font-size:1.4rem;font-weight:900;color:var(--green);font-family:var(--fd)">3</div><div style="font-size:0.68rem;color:var(--txt2)">Seguras</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACTOS -->
+  <div class="screen" id="s-contactos">
+    <div class="ctitle">👥 RED DE CONFIANZA</div>
+    <div class="invite-box">
+      <div style="font-size:0.72rem;color:var(--txt2);letter-spacing:1px">TU CÓDIGO DE INVITACIÓN</div>
+      <div class="inv-code" id="inv-code">FONF-7X4K</div>
+      <div class="inv-sub">Comparte para vincular contactos de confianza</div>
+      <button class="sbtn" onclick="shareCode()">📤 Compartir Código</button>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="ctitle">➕ Agregar Contacto</div>
+      <div class="addinp">
+        <input id="code-in" class="ci" type="text" placeholder="Código FONFY..." maxlength="9">
+        <button class="addsbtn" onclick="addContact()">Agregar</button>
+      </div>
+    </div>
+    <div class="ctitle" style="margin-bottom:8px">CONTACTOS VINCULADOS (3)</div>
+    <div class="citem">
+      <div class="cavatar conl" style="background:linear-gradient(135deg,#e91e63,#ff5722)">M</div>
+      <div class="cinfo"><div class="cname">María García</div><div class="cstat">Zona Sur · San Miguel · hace 2 min</div></div>
+      <div class="cdot on"></div>
+    </div>
+    <div class="citem">
+      <div class="cavatar conl" style="background:linear-gradient(135deg,#673ab7,#2196f3)">C</div>
+      <div class="cinfo"><div class="cname">Carlos Quispe</div><div class="cstat">Sopocachi · hace 5 min</div></div>
+      <div class="cdot on"></div>
+    </div>
+    <div class="citem">
+      <div class="cavatar coff" style="background:linear-gradient(135deg,#37474f,#546e7a)">A</div>
+      <div class="cinfo"><div class="cname">Ana López</div><div class="cstat" style="color:var(--orange)">⚠️ Sin conexión 45 min · Última pos: Centro</div></div>
+      <div class="cdot off"></div>
+    </div>
+    <div class="e2ee">🔐 Ubicaciones cifradas extremo a extremo (E2EE)</div>
+  </div>
+
+  <!-- TIENDAS -->
+  <div class="screen" id="s-tiendas">
+    <div class="ctitle">🏪 TIENDAS Y SERVICIOS 24/7</div>
+    <div style="font-size:0.73rem;color:var(--txt2);margin-bottom:12px">La Paz, Bolivia</div>
+    <div class="stitle">🛒 Supermercados y Tiendas</div>
+    <div class="titem"><div class="tico">🛒</div><div><div class="tname">Xpress Market — Sopocachi</div><div class="taddr">Calle Rosendo Gutiérrez (cerca Plaza España)</div><span class="ttag tsuper">SUPERMERCADO 24/7</span></div></div>
+    <div class="titem"><div class="tico">🛒</div><div><div class="tname">Xpress Market — Calacoto</div><div class="taddr">Calle 15 (frente al Colegio Calvert)</div><span class="ttag tsuper">SUPERMERCADO 24/7</span></div></div>
+    <div class="titem"><div class="tico">🛒</div><div><div class="tname">Xpress Market — Miraflores</div><div class="taddr">Cerca de la Plaza Triangular</div><span class="ttag tsuper">SUPERMERCADO 24/7</span></div></div>
+    <div class="titem"><div class="tico">⛽</div><div><div class="tname">Spacio1 (Petrobras)</div><div class="taddr">Av. Montes, La Paz centro</div><span class="ttag tsuper">TIENDA 24/7</span></div></div>
+    <div class="titem"><div class="tico">⛽</div><div><div class="tname">Tiger Market / On the Run</div><div class="taddr">Varios surtidores en la ciudad</div><span class="ttag tsuper">TIENDA 24/7</span></div></div>
+    <div class="stitle">💊 Farmacias 24 Horas</div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacorp — El Prado</div><div class="taddr">Av. 16 de Julio (frente al Hotel Plaza)</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacorp — Miraflores</div><div class="taddr">Av. Saavedra esq. Villalobos</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacorp — Obrajes</div><div class="taddr">Av. Hernando Siles, Calle 10</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacorp — Calacoto</div><div class="taddr">Calle 21 esq. José Aguirre Achá</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacias Bolivia — Miraflores</div><div class="taddr">Calle Víctor Eduardo</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="titem"><div class="tico">💊</div><div><div class="tname">Farmacias Chávez</div><div class="taddr">Sopocachi y Zona Sur</div><span class="ttag tfarma">FARMACIA 24H</span></div></div>
+    <div class="stitle">🏧 Cajeros 24h</div>
+    <div class="titem"><div class="tico">🏧</div><div><div class="tname">Multicajeros BCP / Banco Unión</div><div class="taddr">Av. Camacho y El Prado (centro)</div><span class="ttag tcajero">CAJERO 24/7</span></div></div>
+    <div class="titem"><div class="tico">🏧</div><div><div class="tname">Cajeros San Miguel</div><div class="taddr">Zona Sur — San Miguel (varios)</div><span class="ttag tcajero">CAJERO 24/7</span></div></div>
+  </div>
+
+  <!-- PERFIL -->
+  <div class="screen" id="s-perfil">
+    <div class="ph">
+      <div class="pbig" id="p-av">U</div>
+      <div class="pname" id="p-name">Usuario</div>
+      <div class="pemail" id="p-email">correo@gmail.com</div>
+      <div class="pbadge">NIVEL: CIUDADANO</div>
+    </div>
+
+    <div class="sentcard">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="senttitle">🛡️ MODO CENTINELA</div>
+        <div class="tog" id="sent-tog" onclick="toggleSentinel()"></div>
+      </div>
+      <div class="sentdesc">Si el dispositivo pierde GPS o conexión por más de <strong>30 minutos</strong>, el sistema notificará a tu red de confianza con tu última ubicación.</div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">🔐 Seguridad</div>
+      <div class="sitem">
+        <div class="sico">🔒</div>
+        <div class="slbl">Cifrado E2EE de ubicación</div>
+        <div class="tog on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="sitem" onclick="showModal('🔑','Cambiar Contraseña','Esta función estará disponible próximamente.', null, false)">
+        <div class="sico">🔑</div>
+        <div class="slbl">Cambiar Contraseña</div>
+        <div class="sarr">›</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">🔔 Notificaciones</div>
+      <div class="sitem"><div class="sico">📍</div><div class="slbl">Alerta zona peligrosa</div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="sitem"><div class="sico">👥</div><div class="slbl">Notif. red de confianza</div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="sitem"><div class="sico">🛡️</div><div class="slbl">Alertas geofencing</div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">⚙️ Privacidad</div>
+      <div class="sitem"><div class="sico">🌐</div><div class="slbl">Compartir ubicación en tiempo real</div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="sitem" onclick="showToast('📤','Exportando','Tus datos serán enviados a tu correo.','#2979ff')"><div class="sico">📤</div><div class="slbl">Exportar mis datos</div><div class="sarr">›</div></div>
+    </div>
+
+    <!-- LOGOUT BUTTON - PROMINENT -->
+    <button class="logout-btn" onclick="doLogout()">
+      <span style="font-size:1.3rem">🚪</span>
+      CERRAR SESIÓN
+    </button>
+
+    <div class="appinfo">
+      <div style="font-family:var(--fd);font-size:0.88rem;color:var(--cyan);margin-bottom:6px">FONFY SECURITY v2.0</div>
+      La Paz, Bolivia · 2025<br>
+      103 módulos policiales integrados (GAMLP 2021)<br>
+      <span style="color:rgba(0,229,255,.4)">● Sistema activo</span>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- BOTTOM NAV -->
+<nav id="bnav">
+  <div class="ni active" id="n-home" onclick="go('home')"><div class="nicon">🏠</div><div class="nlabel">Inicio</div></div>
+  <div class="ni" id="n-mapa" onclick="go('mapa')"><div class="nicon">🗺️</div><div class="nlabel">Mapa</div></div>
+  <div class="ni" id="n-contactos" onclick="go('contactos')"><div class="nicon">👥</div><div class="nlabel">Red</div></div>
+  <div class="ni" id="n-tiendas" onclick="go('tiendas')"><div class="nicon">🏪</div><div class="nlabel">24/7</div></div>
+  <div class="ni" id="n-perfil" onclick="go('perfil')"><div class="nicon">👤</div><div class="nlabel">Perfil</div></div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ===== SESSION CHECK — runs first =====
+const session = JSON.parse(localStorage.getItem('fonfy_session') || 'null');
+if (!session) { window.location.href = 'login.html'; }
+else {
+  // Populate user info
+  const initials = session.username.charAt(0).toUpperCase();
+  document.getElementById('av').textContent = initials;
+  document.getElementById('p-av').textContent = initials;
+  document.getElementById('p-name').textContent = session.username;
+  document.getElementById('p-email').textContent = session.email;
+  const invCode = 'FONF-' + session.username.substring(0,4).toUpperCase().padEnd(4,'X');
+  document.getElementById('inv-code').textContent = invCode;
+}
+
+// ===== NAVIGATION =====
+let curScreen = 'home';
+let mapReady = false;
+
+function go(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  document.getElementById('n-'+name).classList.add('active');
+  curScreen = name;
+  document.getElementById('main').scrollTop = 0;
+  if (name === 'mapa' && !mapReady) setTimeout(initMap, 80);
+}
+
+// ===== TOAST =====
+let toastT = null;
+function showToast(ico, title, msg, color) {
+  color = color || '#ff9100';
+  document.getElementById('t-ico').textContent = ico;
+  document.getElementById('t-title').textContent = title;
+  document.getElementById('t-title').style.color = color;
+  document.getElementById('t-msg').textContent = msg;
+  document.getElementById('toast').style.borderColor = color;
+  document.getElementById('toast').classList.add('show');
+  if (toastT) clearTimeout(toastT);
+  toastT = setTimeout(hideToast, 4000);
+}
+function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+// ===== MODAL =====
+let modalCb = null;
+function showModal(ico, title, msg, cb, danger) {
+  danger = danger !== false;
+  document.getElementById('m-ico').textContent = ico;
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-msg').textContent = msg;
+  const ok = document.getElementById('m-ok');
+  ok.className = 'mok' + (danger ? '' : ' green');
+  ok.textContent = cb ? 'CONFIRMAR' : 'OK';
+  document.getElementById('modal').style.borderColor = danger ? 'var(--red)' : 'var(--cyan)';
+  modalCb = cb;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmModal() { closeModal(); if (modalCb) { modalCb(); modalCb = null; } }
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+// ===== GPS =====
+let userLat = -16.5, userLng = -68.14;
+function getGPS() {
+  if (!navigator.geolocation) { setZone(userLat, userLng); return; }
+  navigator.geolocation.getCurrentPosition(
+    p => { userLat = p.coords.latitude; userLng = p.coords.longitude; setZone(userLat, userLng); if(userMk) userMk.setLatLng([userLat,userLng]); },
+    () => setZone(userLat, userLng),
+    {enableHighAccuracy:true, timeout:8000}
+  );
+}
+function setZone(lat, lng) {
+  document.getElementById('coords').textContent = lat.toFixed(5)+', '+lng.toFixed(5);
+  const z = getZoneAt(lat, lng);
+  const classes = {1:'z-safe',2:'z-norm',3:'z-risk',4:'z-danger'};
+  const texts   = {1:'● SEGURA',2:'● MODERADO',3:'● RIESGO',4:'● PELIGRO'};
+  const labels  = {1:'Zona Segura',2:'Riesgo Moderado',3:'Riesgo Medio',4:'Alto Riesgo'};
+  if (z) {
+    document.getElementById('zone-name').textContent = z.name;
+    document.getElementById('zone-addr').textContent = labels[z.risk];
+    const b = document.getElementById('zone-badge');
+    b.className = 'zbadge ' + classes[z.risk];
+    b.textContent = texts[z.risk];
+    if (z.risk >= 4) showToast('🚨','Zona Peligrosa','Entraste a '+z.name+'. ¡Ten cuidado!','#ff1744');
+  } else {
+    document.getElementById('zone-name').textContent = 'La Paz, Bolivia';
+    document.getElementById('zone-addr').textContent = 'Zona urbana';
+  }
+}
+
+// ===== MAP DATA =====
+const ZONES = [
+  {name:"Periférica",risk:4,color:"#ff1744",coords:[[-16.455,-68.145],[-16.455,-68.115],[-16.485,-68.11],[-16.49,-68.13],[-16.475,-68.15]]},
+  {name:"Villa Fátima",risk:4,color:"#ff1744",coords:[[-16.48,-68.155],[-16.48,-68.135],[-16.5,-68.13],[-16.505,-68.15],[-16.495,-68.16]]},
+  {name:"Villas / Villa Victoria",risk:4,color:"#ff1744",coords:[[-16.47,-68.13],[-16.47,-68.105],[-16.495,-68.10],[-16.5,-68.12],[-16.49,-68.135]]},
+  {name:"Max Paredes",risk:4,color:"#ff1744",coords:[[-16.495,-68.145],[-16.495,-68.125],[-16.515,-68.12],[-16.52,-68.14],[-16.51,-68.15]]},
+  {name:"Buenos Aires / Cementerio",risk:3,color:"#ff9100",coords:[[-16.495,-68.125],[-16.49,-68.105],[-16.51,-68.10],[-16.52,-68.12],[-16.515,-68.13]]},
+  {name:"San Pedro",risk:3,color:"#ff9100",coords:[[-16.505,-68.155],[-16.505,-68.14],[-16.525,-68.14],[-16.525,-68.16],[-16.515,-68.165]]},
+  {name:"Centro / Casco Viejo",risk:3,color:"#ff9100",coords:[[-16.505,-68.14],[-16.505,-68.12],[-16.52,-68.12],[-16.525,-68.14]]},
+  {name:"Sopocachi",risk:2,color:"#ffee00",coords:[[-16.51,-68.16],[-16.515,-68.14],[-16.535,-68.14],[-16.54,-68.155],[-16.53,-68.165]]},
+  {name:"Miraflores",risk:2,color:"#ffee00",coords:[[-16.505,-68.115],[-16.505,-68.09],[-16.53,-68.09],[-16.535,-68.115],[-16.52,-68.115]]},
+  {name:"Zona Sur (Calacoto/San Miguel/Obrajes)",risk:1,color:"#00e676",coords:[[-16.53,-68.165],[-16.535,-68.13],[-16.56,-68.13],[-16.57,-68.15],[-16.565,-68.17],[-16.545,-68.18]]},
+];
+const POLICE = [
+  {n:"Mód. Plaza Avaroa",lat:-16.514,lng:-68.151},{n:"E.P.I. San Pedro",lat:-16.507,lng:-68.148},
+  {n:"E.P.I. Cotahuma",lat:-16.499,lng:-68.156},{n:"Mód. Max Paredes",lat:-16.497,lng:-68.141},
+  {n:"Mód. 6 de Agosto",lat:-16.511,lng:-68.147},{n:"E.P.I. Miraflores",lat:-16.508,lng:-68.108},
+  {n:"Mód. San Miguel",lat:-16.546,lng:-68.148},{n:"Mód. Calacoto",lat:-16.554,lng:-68.145},
+  {n:"Mód. Villa Victoria",lat:-16.476,lng:-68.119},{n:"E.P.I. Periférica",lat:-16.461,lng:-68.129},
+  {n:"Mód. Buenos Aires",lat:-16.498,lng:-68.117},{n:"Mód. Centro",lat:-16.506,lng:-68.133},
+  {n:"Mód. Obrajes",lat:-16.537,lng:-68.155},{n:"Mód. Sopocachi",lat:-16.516,lng:-68.153},
+];
+const STORES = [
+  {n:"Xpress Market",a:"Sopocachi",lat:-16.516,lng:-68.152,i:"🛒"},
+  {n:"Xpress Market",a:"Calacoto",lat:-16.553,lng:-68.143,i:"🛒"},
+  {n:"Xpress Market",a:"Miraflores",lat:-16.511,lng:-68.107,i:"🛒"},
+  {n:"Farmacorp",a:"El Prado",lat:-16.501,lng:-68.135,i:"💊"},
+  {n:"Farmacorp",a:"Miraflores",lat:-16.508,lng:-68.109,i:"💊"},
+  {n:"Farmacorp",a:"Calacoto",lat:-16.552,lng:-68.144,i:"💊"},
+  {n:"Cajero BCP/Unión",a:"Av. Camacho",lat:-16.503,lng:-68.132,i:"🏧"},
+];
+
+function getZoneAt(lat, lng) {
+  for (const z of ZONES) {
+    const lats = z.coords.map(c=>c[0]), lngs = z.coords.map(c=>c[1]);
+    if (lat>=Math.min(...lats)&&lat<=Math.max(...lats)&&lng>=Math.min(...lngs)&&lng<=Math.max(...lngs)) return z;
+  }
+  return null;
+}
+
+// ===== MAP =====
+let lmap, zoneLayer, policeLayer, storeLayer, userLayer, userMk;
+const fstate = {zones:true, police:true, stores:true, me:true};
+
+function initMap() {
+  if (mapReady) return;
+  lmap = L.map('lmap',{center:[-16.5,-68.14],zoom:13,zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(lmap);
+  document.getElementById('mload').style.display='none';
+
+  zoneLayer = L.layerGroup();
+  ZONES.forEach(z => {
+    const p = L.polygon(z.coords,{color:z.color,fillColor:z.color,fillOpacity:.22,weight:2,opacity:.8});
+    p.bindPopup('<b>'+z.name+'</b><br><span style="color:'+z.color+'">'+(z.risk===4?'Alto Riesgo':z.risk===3?'Riesgo Medio':z.risk===2?'Moderado':'Seguro')+'</span>');
+    zoneLayer.addLayer(p);
+    const c = p.getBounds().getCenter();
+    zoneLayer.addLayer(L.marker([c.lat,c.lng],{icon:L.divIcon({html:'<div style="font-size:8px;font-weight:700;color:white;text-shadow:0 0 4px rgba(0,0,0,.9);white-space:nowrap;pointer-events:none">'+z.name+'</div>',className:'',iconAnchor:[0,0]}),interactive:false}));
+  });
+  zoneLayer.addTo(lmap);
+
+  policeLayer = L.layerGroup();
+  const pIco = L.divIcon({html:'<div style="background:#2979ff;border-radius:50%;width:22px;height:22px;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 8px rgba(41,121,255,.6)">👮</div>',className:'',iconSize:[22,22],iconAnchor:[11,11]});
+  POLICE.forEach(m => { const mk=L.marker([m.lat,m.lng],{icon:pIco}); mk.bindPopup('<b>👮 '+m.n+'</b>'); policeLayer.addLayer(mk); });
+  policeLayer.addTo(lmap);
+
+  storeLayer = L.layerGroup();
+  STORES.forEach(s => {
+    const sIco = L.divIcon({html:'<div style="background:#0d1628;border-radius:50%;width:22px;height:22px;border:2px solid #00e5ff;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(0,229,255,.4)">'+s.i+'</div>',className:'',iconSize:[22,22],iconAnchor:[11,11]});
+    const mk=L.marker([s.lat,s.lng],{icon:sIco}); mk.bindPopup('<b>'+s.i+' '+s.n+'</b><br><small>'+s.a+'</small><br><small>🕐 24/7</small>'); storeLayer.addLayer(mk);
+  });
+  storeLayer.addTo(lmap);
+
+  userLayer = L.layerGroup();
+  const uIco = L.divIcon({html:'<div style="background:#00e676;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 12px rgba(0,230,118,.8)"></div>',className:'',iconSize:[16,16],iconAnchor:[8,8]});
+  userMk = L.marker([userLat,userLng],{icon:uIco}); userMk.bindPopup('<b>📍 Tu ubicación</b>'); userLayer.addLayer(userMk);
+  userLayer.addTo(lmap);
+
+  mapReady = true;
+  getGPS();
+}
+
+function toggleF(btn) {
+  const f = btn.dataset.f;
+  btn.classList.toggle('on');
+  const on = btn.classList.contains('on');
+  fstate[f] = on;
+  const map = {zones:zoneLayer,police:policeLayer,stores:storeLayer,me:userLayer};
+  if (!lmap || !map[f]) return;
+  on ? lmap.addLayer(map[f]) : lmap.removeLayer(map[f]);
+}
+
+// ===== SOS =====
+let sosActive = false, sosHold = null, sosTimer = null;
+const sosBtn = document.getElementById('sos-btn');
+
+function startHold() {
+  if (sosActive) { showModal('🛑','Cancelar SOS','¿Deseas cancelar la alerta SOS activa?', cancelSOS, true); return; }
+  sosHold = setTimeout(activateSOS, 3000);
+  sosBtn.style.transform = 'scale(0.95)';
+}
+function stopHold() {
+  if (sosHold) { clearTimeout(sosHold); sosHold = null; }
+  sosBtn.style.transform = '';
+}
+sosBtn.addEventListener('mousedown', startHold);
+sosBtn.addEventListener('touchstart', e => { e.preventDefault(); startHold(); }, {passive:false});
+sosBtn.addEventListener('mouseup', stopHold);
+sosBtn.addEventListener('touchend', stopHold);
+sosBtn.addEventListener('mouseleave', stopHold);
+
+function activateSOS() {
+  sosActive = true;
+  document.getElementById('sos-banner').classList.add('show');
+  sosBtn.style.background = 'radial-gradient(circle at 35% 35%,#ff6b6b,#8b0000)';
+  document.getElementById('sos-sub').textContent = 'ACTIVO · MANTENER PARA CANCELAR';
+  showToast('🚨','SOS Enviado','Contactos notificados. Ayuda en camino.','#ff1744');
+  sosTimer = setTimeout(cancelSOS, 1800000);
+}
+function cancelSOS() {
+  sosActive = false;
+  document.getElementById('sos-banner').classList.remove('show');
+  sosBtn.style.background = '';
+  document.getElementById('sos-sub').textContent = 'MANTENER 3 SEG';
+  if (sosTimer) clearTimeout(sosTimer);
+  showToast('✅','SOS Cancelado','Alerta desactivada.','#00e676');
+}
+
+// ===== SENTINEL =====
+let sentActive = false, sentTimer = null;
+function toggleSentinel() {
+  const tog = document.getElementById('sent-tog');
+  tog.classList.toggle('on');
+  sentActive = tog.classList.contains('on');
+  if (sentActive) {
+    showToast('🛡️','Modo Centinela Activado','Monitoreo en segundo plano activo.','#ff9100');
+    sentTimer = setTimeout(() => { if(sentActive) showToast('⚠️','Centinela','Sin GPS por 30 min. Contactos notificados.','#ff9100'); }, 1800000);
+  } else {
+    if (sentTimer) clearTimeout(sentTimer);
+    showToast('🛡️','Modo Centinela Desactivado','','#555');
+  }
+}
+
+// ===== CONTACTS =====
+function shareCode() {
+  const code = document.getElementById('inv-code').textContent;
+  if (navigator.share) {
+    navigator.share({title:'FONFY SECURITY',text:'Únete a mi red: '+code,url:window.location.href}).catch(()=>{});
+  } else {
+    navigator.clipboard && navigator.clipboard.writeText(code);
+    showToast('📋','Código Copiado','Código '+code+' copiado al portapapeles','#2979ff');
+  }
+}
+function addContact() {
+  const v = document.getElementById('code-in').value.trim().toUpperCase();
+  if (!v || v.length < 4) { showToast('❌','Error','Ingresa un código válido','#ff1744'); return; }
+  showToast('✅','Solicitud Enviada','Invitación enviada al código '+v,'#00e676');
+  document.getElementById('code-in').value = '';
+}
+
+// ===== LOGOUT =====
+function doLogout() {
+  showModal('🚪','Cerrar Sesión','¿Estás seguro que deseas cerrar sesión?', () => {
+    localStorage.removeItem('fonfy_session');
+    window.location.href = 'login.html';
+  }, false);
+  // Make modal button green not red
+  setTimeout(() => { document.getElementById('modal').style.borderColor = 'var(--orange)'; }, 10);
+}
+
+// ===== GEOFENCE DEMO =====
+setTimeout(() => {
+  showToast('🗺️','FONFY activo','Tu red de seguridad está en línea.','#00e676');
+}, 1500);
+
+// ===== SW =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
